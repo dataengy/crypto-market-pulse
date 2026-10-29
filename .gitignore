@@ -1,0 +1,13 @@
+# local env & secrets
+.env
+.env.*
+!.env.*.demo
+# python
+.venv/
+__pycache__/
+*.pyc
+# tooling
+.DS_Store
+.idea/
+.tmp/
+.bak/
