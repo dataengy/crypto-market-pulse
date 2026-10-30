@@ -3,6 +3,7 @@
 Bybit public trades → Kafka → Lakeflow pipeline (bronze → silver → dedup → 1m OHLCV → latest) → AI/BI dashboard.
 A local Redpanda + Spark + Delta + MiniLake loop runs the same code for dev and debug.
 Plan and tasks: [docs/plans/dbx-fe](../docs/plans/dbx-fe/README.md) · backlog: [docs/backlog](docs/backlog).
+SDD (GitHub Spec Kit): [constitution](.specify/memory/constitution.md) · [specs/](specs) · [ADRs](docs/adr) · [architecture](docs/design/architecture.md) · runbooks: [local](docs/runbooks/local-dev-debug.md), [cloud](docs/runbooks/dbx-fe-deploy-verify.md).
 
 ```
 Bybit WS ─ scripts/produce.py ─► Kafka ─┬─► local:  scripts/local_spark.py ─► .tmp/lake/*  (Delta, path-based)

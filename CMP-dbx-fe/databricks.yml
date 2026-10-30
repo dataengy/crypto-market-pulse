@@ -23,6 +23,10 @@ sync:
     - .tmp/**
     - .venv/**
     - tests/**
+    - docs/**
+    - specs/**
+    - .specify/**
+    - .claude/**
     - dashboards/*.lvdash.json
 
 targets:
