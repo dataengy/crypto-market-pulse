@@ -1,0 +1,53 @@
+# Non-secret, tracked config. Secrets/IDs live in config/.env.secrets (template: .env.secrets.demo).
+bybit:
+  endpoint_template: "wss://stream.bybit.com/v5/public/{category}"
+  category: linear
+  symbols: [BTCUSDT, ETHUSDT]
+  ping_interval_s: 20
+  recv_timeout_s: 5
+  open_timeout_s: 15
+  close_timeout_s: 5
+  max_message_bytes: 8000000
+  backoff_initial_s: 1
+  backoff_max_s: 30
+
+kafka:
+  topic: market.trades.v1
+  client_id: cmp-dbx-fe
+  flush_timeout_s: 30
+  starting_offsets: earliest
+  jaas_login_module:
+    oss: org.apache.kafka.common.security.plain.PlainLoginModule
+    databricks: kafkashaded.org.apache.kafka.common.security.plain.PlainLoginModule
+  profiles:
+    local:                      # Redpanda from compose.yml
+      bootstrap: "127.0.0.1:19092"
+      security_protocol: PLAINTEXT
+    cloud:                      # Confluent Cloud or any SASL_SSL/PLAIN Kafka; names of env vars / secret keys
+      bootstrap_env: KAFKA_BOOTSTRAP
+      security_protocol: SASL_SSL
+      sasl_mechanism: PLAIN
+      username_env: KAFKA_API_KEY
+      password_env: KAFKA_API_SECRET
+
+spark:                          # local dev only
+  master: "local[2]"
+  shuffle_partitions: 2
+  lake_dir: .tmp/lake
+  follow_trigger_interval: "30 seconds"
+  show_rows: 20
+
+dashboard:
+  symbol: BTCUSDT
+
+minilake:                       # dmux/minilake emulator, localhost only, no auth
+  host: "http://127.0.0.1:18000"
+  token: local-dev
+  catalog: cmp_local
+  schema: crypto_pulse
+  warehouse_name: cmp-local
+  warehouse_size: Small
+  wait_timeout: 30s
+
+probe:
+  tcp_timeout_s: 10

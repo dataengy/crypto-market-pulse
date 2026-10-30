@@ -1,0 +1,197 @@
+# CMP-gcp — tasks
+
+IDs: `GCP-L*` are local, `GCP-C*` are cloud. Cloud tasks depend on the local tasks that prove the same logic.
+The fixture assertion ("FX") is: BTCUSDT 10:00 bucket → `trade_count=4, volume=0.45, open 70000, high 70010, close 69990` (1 duplicate).
+
+## Local
+
+- [ ] <a id="gcp-l01"></a>**GCP-L01** Runtime discovery & reuse
+  - goal: a read-only inventory, then pick a host, existing or compose runtime for each dependency
+  - depends: —
+  - acceptance: `just discover` exits 0 with no side effects; the chosen-runtime table is filled in (not committed)
+  - plan: [01#s1](01-local-dev-debug.md#s1)
+  - spec: [story 1.1](../../../CMP-gcp/docs/stories/1.1.story.md)
+- [ ] <a id="gcp-l02"></a>**GCP-L02** Scaffold `CMP-gcp/` + strict settings
+  - goal: uv/py3.12, justfile, config/env files, `settings.py` with no defaults
+  - depends: GCP-L01
+  - acceptance: a test shows a missing key raises `ValueError` naming the key and the file; `find_hardcoded_scalars.py` is clean
+  - plan: [01#s2](01-local-dev-debug.md#s2)
+  - spec: [story 1.2](../../../CMP-gcp/docs/stories/1.2.story.md)
+- [ ] <a id="gcp-l03"></a>**GCP-L03** Core port + producer
+  - goal: domain/bybit_ws/publish/reference with scalars taken from config; Pub/Sub attributes; heartbeat; `--source fixture|bybit`
+  - depends: GCP-L02
+  - acceptance: the ported `test_domain` passes; `produce --source fixture --sink stdout` prints 8 events + 1 heartbeat
+  - plan: [01#s3](01-local-dev-debug.md#s3)
+  - spec: [story 1.3](../../../CMP-gcp/docs/stories/1.3.story.md)
+- [ ] <a id="gcp-l04"></a>**GCP-L04** Local emulators
+  - goal: Pub/Sub emulator (reused or compose) + goccy BigQuery emulator, localhost only, idempotent up/down
+  - depends: GCP-L01, GCP-L02
+  - acceptance: running `just up` twice creates no duplicates; `just down` leaves reused services untouched; healthchecks are green
+  - plan: [01#s4](01-local-dev-debug.md#s4)
+  - spec: [story 2.1](../../../CMP-gcp/docs/stories/2.1.story.md)
+- [ ] <a id="gcp-l05"></a>**GCP-L05** BigQuery SQL templates + emulator compatibility probe
+  - goal: `{{dataset}}` SQL with metadata columns, pruning and a DQ view; one dialect for emulator and cloud
+  - depends: GCP-L04
+  - acceptance: every file runs on the emulator, or is listed in `emulator-gaps.md` as `skip_on_emulator`
+  - plan: [01#s5](01-local-dev-debug.md#s5)
+  - spec: [story 2.2](../../../CMP-gcp/docs/stories/2.2.story.md)
+- [ ] <a id="gcp-l06"></a>**GCP-L06** BigQuery-subscription shim
+  - goal: emulator pull → raw insert → ack after insert, imitating the cloud subscription
+  - depends: GCP-L03, GCP-L05
+  - acceptance: the fixture lands as 8 raw rows; the dedup view has 7 rows
+  - plan: [01#s6](01-local-dev-debug.md#s6)
+  - spec: [story 2.3](../../../CMP-gcp/docs/stories/2.3.story.md)
+- [ ] <a id="gcp-l07"></a>**GCP-L07** Beam pipeline
+  - goal: event-time 1m windows, ACCUMULATING late panes, dedup by event_id, DLQ, pane sink + latest-pane view
+  - depends: GCP-L03, GCP-L05
+  - acceptance: `beam_run --profile local` writes FX to `trades_1m_beam`; the log shows which runner actually ran
+  - plan: [01#s7](01-local-dev-debug.md#s7)
+  - spec: [story 3.1](../../../CMP-gcp/docs/stories/3.1.story.md)
+- [ ] <a id="gcp-l08"></a>**GCP-L08** TestStream suite
+  - goal: deterministic windowing tests for cases 1–6
+  - depends: GCP-L07
+  - acceptance: `just test` is green; results match `reference.py`
+  - plan: [01#s8](01-local-dev-debug.md#s8)
+  - spec: [story 3.2](../../../CMP-gcp/docs/stories/3.2.story.md)
+- [ ] <a id="gcp-l09"></a>**GCP-L09** E2E integration + idempotent rerun
+  - goal: fixture → emulator → shim and Beam → assert FX on both paths
+  - depends: GCP-L06, GCP-L07
+  - acceptance: `just it` passes; a second replay doubles raw and leaves both bars unchanged
+  - plan: [01#s9](01-local-dev-debug.md#s9)
+  - spec: [story 4.1](../../../CMP-gcp/docs/stories/4.1.story.md)
+- [ ] <a id="gcp-l10"></a>**GCP-L10** Fault injection F1/F2/F3/F5/F7/F10
+  - goal: `just fault-*` targets plus evidence logs
+  - depends: GCP-L09
+  - acceptance: every row PASS with expected vs actual written to `.tmp/evidence/`
+  - plan: [01#s10](01-local-dev-debug.md#s10)
+  - spec: [story 4.2](../../../CMP-gcp/docs/stories/4.2.story.md)
+- [ ] <a id="gcp-l11"></a>**GCP-L11** Live Bybit smoke (local)
+  - goal: a bounded live run into the emulator
+  - depends: GCP-L09
+  - acceptance: rows for the current minutes on both paths; ingest lag recorded; a reconnect observed
+  - plan: [01#s11](01-local-dev-debug.md#s11)
+  - spec: [story 4.3](../../../CMP-gcp/docs/stories/4.3.story.md)
+- [ ] <a id="gcp-l12"></a>**GCP-L12** Debug tooling + Beam notebook
+  - goal: `debug-*` recipes; `02_beam_event_time.ipynb` ported and executed
+  - depends: GCP-L07
+  - acceptance: the notebook runs inside the test suite; the recipes work against the emulators
+  - plan: [01#s12](01-local-dev-debug.md#s12)
+  - spec: [story 3.3](../../../CMP-gcp/docs/stories/3.3.story.md)
+- [ ] <a id="gcp-l13"></a>**GCP-L13** Hermetic CI
+  - goal: unit + TestStream + emulator integration on PRs, with no cloud credentials
+  - depends: GCP-L08, GCP-L09
+  - acceptance: the workflow is green on a PR (push and PR only after the user confirms)
+  - plan: [01#s13](01-local-dev-debug.md#s13)
+  - spec: [story 4.4](../../../CMP-gcp/docs/stories/4.4.story.md)
+
+## Cloud
+
+- [ ] <a id="gcp-c01"></a>**GCP-C01** Project, billing, budget, price re-check
+  - goal: a trial project linked by the user; config/secrets filled in; the unverified prices re-checked
+  - depends: GCP-L02
+  - acceptance: project ID in config; budget alerts defined; price table updated with source and date
+  - plan: [02#c1](02-cloud-deploy-test.md#c1)
+  - spec: [terraform-foundation](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1200-terraform-foundation/plan.md)
+- [ ] <a id="gcp-c02"></a>**GCP-C02** Terraform rewrite + validate/plan
+  - goal: fix the source `main.tf` (HCL, defaults, metadata, partitioning, DLQ, SAs, live/smoke, WIF, budget)
+  - depends: GCP-C01, GCP-L05
+  - acceptance: `fmt -check`, `validate` and `plan` are clean; the plan has been reviewed by the user; no apply
+  - plan: [02#c2](02-cloud-deploy-test.md#c2)
+  - spec: [terraform-foundation](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1200-terraform-foundation/plan.md)
+- [ ] <a id="gcp-c03"></a>**GCP-C03** Apply core ingest + views
+  - goal: topics, subscriptions, DLQs, datasets and views for `live` and `smoke`
+  - depends: GCP-C02 (+ user approval)
+  - acceptance: subscriptions ACTIVE; views created through `sql_apply.py --profile cloud`
+  - plan: [02#c3](02-cloud-deploy-test.md#c3)
+  - spec: [pubsub-bq-subscription](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1210-pubsub-bq-subscription/plan.md)
+- [ ] <a id="gcp-c04"></a>**GCP-C04** Auth: ADC impersonation + WIF
+  - goal: no key files; GitHub OIDC limited to `dataengy/crypto-market-pulse`
+  - depends: GCP-C03
+  - acceptance: the laptop calls succeed with impersonation; a test workflow authenticates; no `*.json` key exists anywhere
+  - plan: [02#c4](02-cloud-deploy-test.md#c4)
+  - spec: [pubsub-bq-subscription](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1210-pubsub-bq-subscription/plan.md) + [ci-wif-cloud-smoke](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1240-ci-wif-cloud-smoke/plan.md)
+- [ ] <a id="gcp-c05"></a>**GCP-C05** Cloud fixture verification
+  - goal: the same FX assertion as local, through the real BigQuery subscription (`smoke` env)
+  - depends: GCP-C03, GCP-C04, GCP-L09
+  - acceptance: FX passes; a rerun leaves the bars unchanged; DQ/DLQ behave as described; `skip_on_emulator` queries pass
+  - plan: [02#c5](02-cloud-deploy-test.md#c5)
+  - spec: [cloud-smoke-verification](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1220-cloud-smoke-verification/plan.md)
+- [ ] <a id="gcp-c06"></a>**GCP-C06** Bybit reachability gate from GCP
+  - goal: prove the region can reach `stream.bybit.com`
+  - depends: GCP-C04, GCP-L11
+  - acceptance: trades in the Cloud Run job logs; on a 403, stop and ask
+  - plan: [02#c6](02-cloud-deploy-test.md#c6)
+  - spec: [hosted-producer](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1230-hosted-producer/plan.md)
+- [ ] <a id="gcp-c07"></a>**GCP-C07** Hosted producer (Cloud Run job + Scheduler)
+  - goal: bounded scheduled live ingestion into `live`
+  - depends: GCP-C06
+  - acceptance: the live `trades_latest` age stays under the threshold during runs; the schedule is paused by default
+  - plan: [02#c7](02-cloud-deploy-test.md#c7)
+  - spec: [hosted-producer](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1230-hosted-producer/plan.md)
+- [ ] <a id="gcp-c08"></a>**GCP-C08** Looker Studio dashboard
+  - goal: price/OHLC/volume/VWAP/lag panels on the `live` views
+  - depends: GCP-C07
+  - acceptance: the report renders and its URL is in config
+  - plan: [02#c8](02-cloud-deploy-test.md#c8)
+  - spec: [hosted-producer](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1230-hosted-producer/plan.md)
+- [ ] <a id="gcp-c09"></a>**GCP-C09** CI cloud smoke
+  - goal: `workflow_dispatch` runs C05 through WIF
+  - depends: GCP-C04, GCP-C05, GCP-L13
+  - acceptance: a green run with the evidence artifact; no PR trigger
+  - plan: [02#c9](02-cloud-deploy-test.md#c9)
+  - spec: [ci-wif-cloud-smoke](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1240-ci-wif-cloud-smoke/plan.md)
+- [ ] <a id="gcp-c10"></a>**GCP-C10** Optional Dataflow parity run (time-boxed)
+  - goal: the same Beam pipeline on Dataflow with guardrails
+  - depends: GCP-C05, GCP-L08, GCP-L10 (+ user approval)
+  - acceptance: `trades_1m_beam` = `trades_1m` for FX; drain/relaunch gives no double count; job stopped; cost recorded
+  - plan: [02#c10](02-cloud-deploy-test.md#c10)
+  - spec: [dataflow-parity-timeboxed](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1250-dataflow-parity-timeboxed/plan.md)
+- [ ] <a id="gcp-c11"></a>**GCP-C11** Teardown & cost review
+  - goal: `just gcp-down` removes everything the project owns
+  - depends: GCP-C03 (run after any cloud session)
+  - acceptance: the list commands are empty; billing is under budget
+  - plan: [02#c11](02-cloud-deploy-test.md#c11)
+  - spec: [terraform-foundation](../../../CMP-gcp/deploy/agent-os/specs/2026-10-30-1200-terraform-foundation/plan.md) + [teardown runbook](../../../CMP-gcp/deploy/docs/runbooks/teardown.md)
+
+## Backlog (alternatives, not scheduled)
+
+- [ ] <a id="gcp-l14"></a>**GCP-L14** DuckDB stand-in for BigQuery
+  - goal: a fallback if the goccy emulator gaps block L05; needs a SQL dialect layer
+  - depends: GCP-L05
+  - acceptance: FX on DuckDB, with every dialect fork documented
+  - plan: [01#s4](01-local-dev-debug.md#s4)
+- [ ] <a id="gcp-l15"></a>**GCP-L15** PrismRunner for streaming Pub/Sub
+  - goal: check whether Prism runs Python `ReadFromPubSub` against the emulator
+  - depends: GCP-L09
+  - acceptance: `just it` passes with `--runner=PrismRunner`, or the gap is documented
+  - plan: [01#s7](01-local-dev-debug.md#s7)
+- [ ] <a id="gcp-c12"></a>**GCP-C12** Cloud Run pull consumer instead of the BigQuery subscription
+  - goal: custom validation and DLQ in Python
+  - depends: GCP-C05
+  - acceptance: FX passes; cost compared with C05
+  - plan: [02#c1](02-cloud-deploy-test.md#c1)
+- [ ] <a id="gcp-c13"></a>**GCP-C13** Scheduled-query materialization of `trades_1m`
+  - goal: cut the dashboard's raw-table scans
+  - depends: GCP-C08
+  - acceptance: the dashboard reads a table; bytes scanned measured before and after
+  - plan: [02#c8](02-cloud-deploy-test.md#c8)
+- [ ] <a id="gcp-c14"></a>**GCP-C14** e2-micro Free Tier producer
+  - goal: an always-on free host; US-only, so check the Bybit geo-block first
+  - depends: GCP-C06
+  - acceptance: probe PASS from a US region, or the task is closed as blocked
+  - plan: [02#c6](02-cloud-deploy-test.md#c6)
+- [ ] <a id="gcp-c15"></a>**GCP-C15** Terraform GCS remote state
+  - goal: state off the laptop, versioned
+  - depends: GCP-C03
+  - acceptance: `terraform init -migrate-state` works; the bucket has versioning
+  - plan: [02#c2](02-cloud-deploy-test.md#c2)
+- [ ] <a id="gcp-c16"></a>**GCP-C16** Budget kill-switch
+  - goal: a budget Pub/Sub notification triggers a function that pauses the scheduler, stops Dataflow, or disables billing
+  - depends: GCP-C01, GCP-C07
+  - acceptance: a test notification stops the resources
+  - plan: [02#c11](02-cloud-deploy-test.md#c11)
+- [ ] <a id="gcp-c17"></a>**GCP-C17** Dataflow Flex Template + scheduled bounded runs
+  - goal: a repeatable Beam deploy without the laptop
+  - depends: GCP-C10
+  - acceptance: the template launches from CI through WIF; the walltime limit is enforced
+  - plan: [02#c10](02-cloud-deploy-test.md#c10)

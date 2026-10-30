@@ -1,0 +1,53 @@
+schema: spec-driven
+
+# Injected into every OpenSpec artifact / apply / archive for the ClickHouse lane.
+context: |
+  Project: Crypto Market Pulse, ClickHouse lane (CMP-ch). Bybit V5 publicTrade -> Kafka market.trades.v1
+  -> ClickHouse trades_raw -> ReplacingMergeTree trades_dedup -> views trades_1m / trades_latest -> Streamlit.
+  Local: Redpanda + ClickHouse (docker, reuse existing first) + Python consumer.
+  Cloud: Confluent Cloud Basic -> ClickPipes -> ClickHouse Cloud (trial) -> Streamlit Community Cloud.
+  Lane plan and task IDs (CH-L01..L11, CH-C01..C09, CH-LB*, CH-CB*): ../docs/plans/clickhouse/tasks.md.
+  Reference source (never executed, copy then fix): ../crypto-market-pulse-chatgpt/project.
+  Sibling lane for conventions (strict config, shared domain code, justfile, tests): ../CMP-dbx-fe.
+  Fixture gate everywhere: BTCUSDT 2026-10-30 10:00 UTC bar = trade_count 4 / volume 0.45 / open 70000 /
+  high 70010 / close 69990; raw 8 rows, uniqExact(event_id) 7.
+
+  Hard constraints (user rules):
+  - No hardcoded scalars (IDs, URLs, timeouts, ports, topic/group names, regexes) in code: tracked
+    config/config.yaml (non-secret), config/.env.common (env values), config/.env.secrets (secrets,
+    template .env.secrets.demo). Secrets come from Bitwarden `bw`, never from the repo.
+  - No defaults: os.environ["X"], cfg["a"]["b"]; a missing key fails fast naming the key and the file to fill.
+    load_dotenv(..., override=False). Defaults only in tests/fixtures.
+  - Local runtime reuse: discover running services first (read-only inventory); project-owned containers
+    are labelled com.crypto_market_pulse.owner=cmp-ch, bound to 127.0.0.1; never `down -v`, never prune,
+    never touch unlabelled/shared containers, topics, groups or schemas.
+  - Cloud: nothing is provisioned or signed up for without explicit user approval of accounts and spend.
+  - Ponytail: least code, smallest complete change; reuse CMP-dbx-fe / reference code before writing new;
+    no options, wrappers or "for later" code nobody asked for. Backlog items stay in CH-LB*/CH-CB*.
+
+  Process (superpowers): brainstorming -> writing-plans before a change's design; test-driven where logic
+  is non-trivial; verification-before-completion: a task is ticked only after its verify command ran and
+  its output was seen.
+
+rules:
+  proposal:
+    - Name the CH-* task IDs the change covers and link docs/plans/clickhouse sections instead of copying them
+    - State out of scope explicitly, pointing to CH-LB* / CH-CB* backlog IDs
+  specs:
+    - Specs are behavior contracts; no library, class or file names unless they are an external contract (table/view/topic names, CLI recipes)
+    - Every requirement has at least one WHEN/THEN scenario that a test or a just recipe can check
+  design:
+    - Link the ADRs in docs/adr instead of restating decisions; add an ADR for any new irreversible choice
+    - Mark every pricing or free-tier fact as verified (URL + date) or unverified
+  tasks:
+    - Prefix each task with its CH-* ID and end it with the exact verify command or observable result
+    - Tasks that need docker, network or cloud say so; cloud tasks say "needs user approval" when they create accounts or spend
+
+operations:
+  apply:
+    guidance:
+      - Run `python3 ~/.ai/skills/_scripts/utils/find_hardcoded_scalars.py src scripts --exit-nonzero-on-find` before ticking a code task
+      - Update the matching checkbox in ../docs/plans/clickhouse/tasks.md together with this change's tasks.md
+  archive:
+    guidance:
+      - Archive only after `just verify` (local) or `just cloud-verify` (cloud) passed twice and evidence is in docs/evidence/

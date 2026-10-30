@@ -1,0 +1,28 @@
+# Local dev/debug only. Reuse policy: if a compatible Redpanda/MiniLake already runs, point config at it
+# instead. Owned services are named cmp-dbx-*; `just down` stops them and never removes volumes.
+name: cmp-dbx-fe
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.10
+    container_name: cmp-dbx-redpanda
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container        # enables topic auto-creation
+      - --smp=1
+      - --memory=1G
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://127.0.0.1:19092
+    ports:
+      - "127.0.0.1:19092:19092"
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health", "--exit-when-healthy"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+  minilake:
+    image: ghcr.io/dmux/minilake:1.8.0
+    container_name: cmp-dbx-minilake
+    ports:
+      - "127.0.0.1:18000:8000"     # NEVER bind 0.0.0.0: MiniLake has no authentication
+    restart: "no"

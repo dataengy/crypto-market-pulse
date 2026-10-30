@@ -1,0 +1,17 @@
+gcp:
+  auth-no-keys:
+    description: No SA key files; laptop uses ADC plus impersonation, CI uses WIF bound to one repo
+  cost-guardrails:
+    description: Budget alerts, labels, paused schedules, Dataflow caps, mandatory teardown after each session
+  terraform:
+    description: Pinned provider, yamldecode config, required vars without defaults, plan reviewed before any apply
+
+global:
+  config-strict:
+    description: No hardcoded scalars; config.yaml or .env files only; no defaults; fail fast naming key and file
+  ponytail-minimal:
+    description: Smallest complete change; reuse local-lane code; no speculative options or wrappers
+
+process:
+  verification:
+    description: Each task ends with a command and expected evidence; claims need fresh output; gates need user approval

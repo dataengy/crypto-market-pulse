@@ -1,0 +1,102 @@
+# Databricks Free Edition bundle: serverless only, 1 active pipeline, 1 x 2X-Small SQL warehouse.
+# Workspace auth: DATABRICKS_CONFIG_PROFILE from config/.env.secrets (see justfile dbx-* recipes).
+bundle:
+  name: cmp_dbx_fe
+
+variables:
+  catalog:
+    description: Unity Catalog catalog (Free Edition ships `workspace`)
+    default: workspace
+  schema:
+    description: schema for all pipeline tables
+    default: crypto_pulse
+  secret_scope:
+    description: secret scope holding kafka_bootstrap / kafka_api_key / kafka_api_secret (just dbx-secrets)
+    default: cmp
+  warehouse_id:
+    description: the Free Edition SQL warehouse
+    lookup:
+      warehouse: Serverless Starter Warehouse
+
+sync:
+  exclude:
+    - .tmp/**
+    - .venv/**
+    - tests/**
+    - docs/**
+    - specs/**
+    - .specify/**
+    - .claude/**
+    - dashboards/*.lvdash.json
+
+targets:
+  dev:
+    default: true
+
+resources:
+  schemas:
+    crypto_pulse:
+      catalog_name: ${var.catalog}
+      name: ${var.schema}
+      comment: Crypto Market Pulse (bronze → silver → dedup → 1m → latest)
+
+  pipelines:
+    cmp_pipeline:
+      name: cmp-market-pulse
+      serverless: true
+      continuous: false            # triggered: refreshed by cmp_refresh or `just dbx-run` (saves Free quota)
+      channel: CURRENT
+      catalog: ${var.catalog}
+      schema: ${resources.schemas.crypto_pulse.name}
+      configuration:
+        cmp.root: ${workspace.file_path}
+        cmp.secret_scope: ${var.secret_scope}
+      environment:
+        dependencies:
+          - pyyaml
+      libraries:
+        - file:
+            path: ./pipelines/bronze.py
+        - file:
+            path: ./pipelines/10_silver.sql
+        - file:
+            path: ./pipelines/20_dedup.sql
+        - file:
+            path: ./pipelines/30_1m.sql
+        - file:
+            path: ./pipelines/40_latest.sql
+
+  jobs:
+    cmp_kafka_probe:
+      name: cmp-kafka-probe
+      tasks:
+        - task_key: probe
+          environment_key: default
+          spark_python_task:
+            python_file: ./scripts/dbx_kafka_probe.py
+            parameters: ["--root", "${workspace.file_path}", "--secret-scope", "${var.secret_scope}"]
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "4"
+            dependencies:
+              - pyyaml
+
+    cmp_refresh:
+      name: cmp-refresh
+      schedule:
+        quartz_cron_expression: "0 0/15 * * * ?"
+        timezone_id: UTC
+        pause_status: PAUSED      # unpause in the UI when live data flows
+      tasks:
+        - task_key: refresh
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.cmp_pipeline.id}
+
+  dashboards:
+    market_pulse:
+      display_name: Crypto Market Pulse
+      file_path: ./dashboards/market_pulse.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}
+      dataset_schema: ${resources.schemas.crypto_pulse.name}

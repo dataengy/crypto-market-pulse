@@ -1,0 +1,4 @@
+-r requirements-clickhouse.txt
+streamlit>=1.40,<2
+pandas>=2.2,<3
+google-cloud-bigquery>=3.25,<5

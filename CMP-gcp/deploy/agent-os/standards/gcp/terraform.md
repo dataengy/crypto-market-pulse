@@ -1,0 +1,23 @@
+# Terraform
+
+- **Versions:**
+  - `required_version` pinned to the installed minor
+  - provider `hashicorp/google ~> 8.9` (latest 8.9.0, 2026-10-27, [registry](https://registry.terraform.io/providers/hashicorp/google/latest/docs/guides/provider_versions.html), verified 2026-10-30)
+  - commit `.terraform.lock.hcl`
+- **Install:** Terraform itself isn't installed. Get a pinned version via `mise` or `brew`, following the reuse policy, and record it in `tech-stack.md`.
+- **HCL:** one argument per line. The reference file's `{ a = 1, b = 2 }` one-liners are invalid. `terraform fmt -check` is part of the gate.
+- **Inputs:**
+  - `variable "config_path"`, `variable "project_id"`, `variable "billing_account"`: required, **no defaults**
+  - everything else comes from `yamldecode(file(var.config_path))`; see [config-strict](../global/config-strict.md)
+- **Envs:** `for_each = local.cfg.deploy.envs` (`live`, `smoke`) for the topic, subscription, DLQ topic, dataset and raw table. Never share a table between envs, because the fixture minute is a real date.
+- **State:**
+  - local `terraform.tfstate`, gitignored. `ponytail:` local state is fine for one owner; move to GCS (GCP-C15) once a second operator or CI applies.
+  - teardown-friendly: `deletion_protection` and `delete_contents_on_destroy` come from config (`false` / `true` for the trial project)
+- **Gate:**
+  - `terraform fmt -check && terraform validate && terraform plan -out .tmp/tf.plan`
+  - the user reviews the plan text
+  - only then `terraform apply .tmp/tf.plan`
+  - no `-auto-approve`, ever
+- **Out of scope for Terraform:**
+  - BigQuery views: owned by `sql_apply.py --profile cloud`, one renderer for emulator and cloud
+  - the Looker Studio report: manual

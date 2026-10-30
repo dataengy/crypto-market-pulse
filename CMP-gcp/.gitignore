@@ -1,0 +1,7 @@
+# BMAD-generated Claude skills (~2MB) are reproducible; reinstall from the repo root with:
+#   npx bmad-method@6.12.4 install --directory CMP-gcp --modules bmm --tools claude-code --yes --no-shims \
+#     --output-folder docs --set bmm.planning_artifacts={project-root}/docs \
+#     --set bmm.implementation_artifacts={project-root}/docs/stories
+/.claude/skills/
+.tmp/
+.venv/
