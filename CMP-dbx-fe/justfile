@@ -1,0 +1,68 @@
+set dotenv-load
+set dotenv-path := "config/.env.common"
+
+fixture := "tests/fixtures/trades.jsonl"
+# Databricks CLI with the workspace profile from config/.env.secrets
+dbx := "set -a && . config/.env.secrets && set +a && databricks"
+
+default:
+    @just --list
+
+# ---- dev ----
+sync:
+    uv sync
+
+build:
+    uv run python scripts/build.py
+
+test:
+    uv run pytest
+
+verify: build test
+    git diff --exit-code -- pipelines dashboards
+
+# ---- local stack (dev/debug only) ----
+up:
+    docker compose up -d --wait
+
+# stop only; never removes volumes
+down:
+    docker compose stop
+
+# just produce fixture | just produce bybit --max-trades 200
+produce source="fixture" *args:
+    uv run python scripts/produce.py --sink kafka --source {{source}} {{ if source == "fixture" { "--fixture " + fixture } else { "" } }} {{args}}
+
+# just spark [--follow] [--reset]
+spark *args:
+    uv run python scripts/local_spark.py {{args}}
+
+it:
+    uv run pytest -m integration -v
+
+minilake-smoke:
+    uv run python scripts/minilake_smoke.py
+
+# ---- Databricks Free Edition ----
+dbx-validate: build
+    {{dbx}} bundle validate
+
+dbx-deploy: build
+    {{dbx}} bundle deploy
+
+# Kafka creds from config/.env.secrets → secret scope (keys = env names lowercased)
+dbx-secrets scope="cmp":
+    {{dbx}} secrets create-scope {{scope}} || true
+    set -a && . config/.env.secrets && set +a && for k in KAFKA_BOOTSTRAP KAFKA_API_KEY KAFKA_API_SECRET; do \
+      v=$(printenv $k) || { echo "missing $k in config/.env.secrets"; exit 1; }; \
+      databricks secrets put-secret {{scope}} $(echo $k | tr A-Z a-z) --string-value "$v"; done
+
+dbx-probe:
+    {{dbx}} bundle run cmp_kafka_probe
+
+dbx-run:
+    {{dbx}} bundle run cmp_pipeline
+
+# just dbx-query "SELECT * FROM workspace.crypto_pulse.trades_1m ORDER BY window_start DESC LIMIT 20"
+dbx-query sql:
+    {{dbx}} experimental aitools tools query "{{sql}}"
