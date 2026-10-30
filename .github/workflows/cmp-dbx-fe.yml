@@ -1,0 +1,82 @@
+# DBX-B7: checks for CMP-dbx-fe that need no cloud (CMP-dbx-fe/docs/backlog/ci.md).
+name: cmp-dbx-fe
+
+on:
+  push:
+    branches: [main]
+    paths: ["CMP-dbx-fe/**", ".github/workflows/cmp-dbx-fe.yml"]
+  pull_request:
+    paths: ["CMP-dbx-fe/**", ".github/workflows/cmp-dbx-fe.yml"]
+  workflow_dispatch:
+    inputs:
+      local_stack:
+        description: also run Redpanda E2E + MiniLake smoke (docker compose)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: CMP-dbx-fe
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          working-directory: CMP-dbx-fe
+          enable-cache: true
+          cache-dependency-glob: CMP-dbx-fe/uv.lock
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: extractions/setup-just@v4
+      # Spark 4 resolves --packages (delta, kafka) into ~/.ivy2.5.2
+      - uses: actions/cache@v6
+        with:
+          path: ~/.ivy2.5.2
+          key: ivy-${{ runner.os }}-${{ hashFiles('CMP-dbx-fe/uv.lock') }}
+      - run: uv sync --locked
+      - name: build-sync + unit tests
+        run: just verify
+      - name: Spark + Delta models on the fixture
+        run: uv run pytest -m spark -v
+
+  local-stack:
+    if: github.event_name == 'workflow_dispatch' && inputs.local_stack
+    needs: test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          working-directory: CMP-dbx-fe
+          enable-cache: true
+          cache-dependency-glob: CMP-dbx-fe/uv.lock
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: extractions/setup-just@v4
+      - uses: actions/cache@v6
+        with:
+          path: ~/.ivy2.5.2
+          key: ivy-${{ runner.os }}-${{ hashFiles('CMP-dbx-fe/uv.lock') }}
+      - run: uv sync --locked
+      - run: just up
+      - name: Kafka E2E (fixture → Redpanda → Spark)
+        run: just it
+      - run: just minilake-smoke
+      - if: failure()
+        run: docker compose logs --no-color

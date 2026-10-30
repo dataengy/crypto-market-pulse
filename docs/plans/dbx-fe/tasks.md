@@ -129,4 +129,4 @@ Spec Kit (SDD): [specs/](../../../CMP-dbx-fe/specs/) · constitution: [constitut
 - [ ] **DBX-B6** Hosted producer (off the laptop) → [hosted-producer.md](../../../CMP-dbx-fe/docs/backlog/hosted-producer.md)
 
 <a id="dbx-b7"></a>
-- [ ] **DBX-B7** CI: unit + build-sync + Spark test; optional MiniLake workflow → [ci.md](../../../CMP-dbx-fe/docs/backlog/ci.md)
+- [x] **DBX-B7** CI: unit + build-sync + Spark test; optional MiniLake workflow (`databricks bundle validate` in CI still open) → [ci.md](../../../CMP-dbx-fe/docs/backlog/ci.md)
