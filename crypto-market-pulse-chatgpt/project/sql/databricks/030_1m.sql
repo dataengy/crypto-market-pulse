@@ -1,0 +1,15 @@
+CREATE OR REFRESH MATERIALIZED VIEW trades_1m AS
+SELECT symbol,
+  DATE_TRUNC('MINUTE', TIMESTAMP_MILLIS(event_time_ms)) AS window_start,
+  COUNT(*) AS trade_count,
+  MIN_BY(price, named_struct('t', event_time_ms, 'id', event_id)) AS open_price,
+  MAX(price) AS high_price,
+  MIN(price) AS low_price,
+  MAX_BY(price, named_struct('t', event_time_ms, 'id', event_id)) AS close_price,
+  SUM(quantity) AS volume,
+  SUM(price * quantity) AS notional,
+  SUM(price * quantity) / NULLIF(SUM(quantity), 0) AS vwap,
+  COUNT_IF(side = 'Buy') AS buy_trades,
+  MAX(GREATEST(0, received_at_ms - event_time_ms)) AS max_ingest_lag_ms
+FROM trades_dedup
+GROUP BY symbol, DATE_TRUNC('MINUTE', TIMESTAMP_MILLIS(event_time_ms));

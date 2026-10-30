@@ -1,0 +1,30 @@
+# LAST RESORT: launch only if compatible existing OS tools/containers are absent.
+# This project owns these named services; never run `down -v` on shared resources.
+name: crypto-pulse-dev
+services:
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.3.10
+    container_name: cmp-redpanda
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=1G
+      - --reserve-memory=0M
+      - --overprovisioned
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://127.0.0.1:19092
+    ports:
+      - "127.0.0.1:19092:19092"
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.3
+    container_name: cmp-clickhouse
+    environment:
+      CLICKHOUSE_DB: market_pulse
+      CLICKHOUSE_USER: default
+      CLICKHOUSE_PASSWORD: "local_only_change_me"
+    ports:
+      - "127.0.0.1:8123:8123"
+      - "127.0.0.1:9000:9000"

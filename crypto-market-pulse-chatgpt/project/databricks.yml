@@ -1,0 +1,39 @@
+# Manual opt-in deployment, never executed in pull-request CI.
+bundle:
+  name: crypto_market_pulse
+
+variables:
+  catalog:
+    default: workspace
+  schema:
+    default: crypto_pulse
+  warehouse_id:
+    description: Existing Databricks SQL warehouse ID
+    default: REPLACE_WITH_WAREHOUSE_ID
+
+resources:
+  pipelines:
+    market_pulse:
+      name: crypto-market-pulse-sql
+      serverless: true
+      continuous: false
+      catalog: ${var.catalog}
+      schema: ${var.schema}
+      libraries:
+        - file:
+            path: ./sql/databricks/010_silver.sql
+        - file:
+            path: ./sql/databricks/020_dedup.sql
+        - file:
+            path: ./sql/databricks/030_1m.sql
+        - file:
+            path: ./sql/databricks/040_latest.sql
+  dashboards:
+    market_pulse_dashboard:
+      display_name: Crypto Market Pulse · Public Bybit trades
+      file_path: ./dashboards/market_pulse.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+
+sync:
+  exclude:
+    - dashboards/*.lvdash.json

@@ -1,0 +1,11 @@
+symbol_list: [BTCUSDT, ETHUSDT]
+category: linear
+kafka_bootstrap: localhost:19092
+kafka_topic: market.trades.v1
+kafka_group: crypto-pulse-clickhouse-debug-v1
+clickhouse_url: http://127.0.0.1:8123
+clickhouse_database: market_pulse
+pubsub_project: local-crypto-pulse
+pubsub_topic: market-trades-v1
+databricks_catalog: workspace
+databricks_schema: crypto_pulse

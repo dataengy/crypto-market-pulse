@@ -1,0 +1,2 @@
+# Local emulator project ID; cloud override CMP_PUBSUB_PROJECT.
+pubsub_project: local-crypto-pulse

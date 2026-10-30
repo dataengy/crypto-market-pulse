@@ -1,0 +1,2 @@
+# Local defaults only. Cloud brokers and credentials supplied by environment/secrets.
+kafka_group: crypto-pulse-clickhouse-debug-v1

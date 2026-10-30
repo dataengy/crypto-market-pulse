@@ -1,0 +1,36 @@
+# All commands run in the project root. Inspect inventory before mutation.
+set shell := ["bash", "-c"]
+
+inventory:
+    python3 scripts/discover_local_runtime.py --markdown
+
+unit:
+    PYTHONPATH=src pytest -q tests --ignore=tests/test_beam_optional.py
+
+replay:
+    python3 scripts/produce.py --fixture tests/fixtures/trades.jsonl --sink stdout
+
+preview:
+    python3 scripts/preview_marts.py
+
+kafka-replay:
+    python3 scripts/produce.py --profile clickhouse --sink kafka --fixture tests/fixtures/trades.jsonl
+
+ch-setup:
+    python3 scripts/clickhouse_setup.py
+
+ch-consume:
+    python3 scripts/clickhouse_consumer.py
+
+spark-debug:
+    python3 scripts/local_spark_debug.py
+
+beam-test:
+    PYTHONPATH=src pytest -q tests/test_beam_optional.py
+
+dashboard:
+    streamlit run dashboards/app.py
+
+# Last-resort only; do not run if existing suitable services found.
+new-local-stack:
+    docker compose -f infra/clickhouse/compose.yml up -d
