@@ -1,5 +1,7 @@
 # DBX-B4 — Fallback ingest: UC Volume drop + Auto Loader
 
+> **Promoted.** The full plan is [docs/plans/dbx-fe/alt-no-kafka.md](../../../docs/plans/dbx-fe/alt-no-kafka.md) (tasks `DBX-A01…A07`); it supersedes the sketch below.
+
 **When:** [DBX-C02](../../../docs/plans/dbx-fe/tasks.md#dbx-c02) shows that Free Edition serverless cannot reach the Kafka cluster (egress is limited to trusted domains). ← [tasks](../../../docs/plans/dbx-fe/tasks.md#dbx-b4)
 
 **Design:** laptop/hosted *shipper* consumes Kafka → writes JSONL micro-batches → `WorkspaceClient.files.upload` to `/Volumes/<catalog>/<schema>/landing/` (inbound to Databricks, so it's allowed). Bronze becomes `STREAM read_files('/Volumes/…/landing', format => 'json', schema => TRADE_SCHEMA)`; silver and later stay unchanged.

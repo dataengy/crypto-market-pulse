@@ -10,6 +10,7 @@ The same code runs on both sides: `cmp.bronze.parse_trades`, `cmp.kafka.*` and t
 | Doc | Content |
 |---|---|
 | [plan.md](plan.md) | the approved plan: layout, steps, verification |
+| [alt-no-kafka.md](alt-no-kafka.md) | alternate plan, if Free Edition can't reach any Kafka: shipper → UC Volume → Auto Loader (`DBX-A*`) |
 | [tasks.md](tasks.md) | `DBX-L*` local, `DBX-C*` cloud, `DBX-B*` backlog (each B task has its own plan in `CMP-dbx-fe/docs/backlog/`) |
 | [../../../CMP-dbx-fe/README.md](../../../CMP-dbx-fe/README.md) | how to run it |
 

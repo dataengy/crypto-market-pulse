@@ -44,7 +44,7 @@ Plan: [plan.md](plan.md) · index: [README.md](README.md) · implementation: `./
 
 <a id="dbx-c02"></a>
 - [ ] **DBX-C02** **Gate:** Free Edition serverless → Kafka egress (`just dbx-secrets && just dbx-deploy && just dbx-probe`)
-  - acceptance: the probe prints `TCP OK` and `Kafka SASL read OK`. **If it is blocked: stop and switch to [DBX-B4](#dbx-b4)**
+  - acceptance: the probe prints `TCP OK` and `Kafka SASL read OK`. **If it is blocked: stop and switch to the alternate plan [alt-no-kafka.md](alt-no-kafka.md) ([DBX-A01](#dbx-a01)…)**
   - plan: [plan.md › Step 6](plan.md#steps)
 
 <a id="dbx-c03"></a>
@@ -59,6 +59,35 @@ Plan: [plan.md](plan.md) · index: [README.md](README.md) · implementation: `./
 - [ ] **DBX-C05** Live data + dashboard: `CMP_PROFILE=cloud just produce bybit`, unpause `cmp-refresh`, open the dashboard
   - acceptance: bars appear within one refresh; Free Edition limits respected (1 pipeline, the 2X-Small warehouse); `cmp-refresh` paused again after the demo
 
+<a id="dbx-a"></a>
+## Alternate path (DBX-A): no Kafka reachable from Free Edition → push via UC Volume — plan: [alt-no-kafka.md](alt-no-kafka.md)
+
+<a id="dbx-a01"></a>
+- [ ] **DBX-A01** Extend the probe: TCP bootstrap / HTTPS Kafka REST / trusted control host / `ls` on the landing Volume → decides which path to take
+  - depends: DBX-C01 · acceptance: one probe run prints all 4 results; the chosen path is recorded in the README status · plan: [alt-no-kafka.md#a-decision](alt-no-kafka.md#a-decision)
+<a id="dbx-a02"></a>
+- [ ] **DBX-A02** `VolumePublisher` in `cmp.publish`: offset-named JSONL files, `files.upload(overwrite=True)`, batch settings from `config.yaml: volume.*`
+  - depends: DBX-A01 · acceptance: unit tests for naming and idempotent re-upload; no hardcoded scalars
+<a id="dbx-a03"></a>
+- [ ] **DBX-A03** `scripts/ship_to_volume.py` + `just ship`: Kafka → Volume, commit after upload, idle exit, poison stop; `--source fixture` uploads without Kafka
+  - depends: DBX-A02 · acceptance: a crash between upload and commit re-ships the same offsets; `trades_dedup` is unchanged
+<a id="dbx-a04"></a>
+- [ ] **DBX-A04** Bundle `volumes: landing` + pipeline config `cmp.bronze_source: kafka|volume` (var with no default); Auto Loader branch in `pipelines/bronze.py`
+  - depends: DBX-A02 · acceptance: `just dbx-validate` ok; the build-sync test is green
+<a id="dbx-a05"></a>
+- [ ] **DBX-A05** Local parity: shipper → `.tmp/landing` → `local_spark.py --bronze-source volume`
+  - depends: DBX-A03, DBX-L05 · acceptance: the fixture bar is `4 / 0.45 / 70000 / 70010 / 69990`; re-shipping leaves it unchanged
+<a id="dbx-a06"></a>
+- [ ] **DBX-A06** Cloud verify over the Volume: deploy (`bronze_source=volume`) → `just ship --source fixture` → `just dbx-run` → `just dbx-query`
+  - depends: DBX-A04, DBX-A05 · acceptance: same bar as DBX-C04; a second ship and run leaves the bar unchanged
+<a id="dbx-a07"></a>
+- [ ] **DBX-A07** Hosted shipper run: GH Actions `workflow_dispatch` (bounded), then `bundle run`
+  - depends: DBX-A06 · acceptance: a live Bybit → Kafka → Volume → dashboard refresh works without the laptop
+<a id="dbx-ab1"></a>
+- [ ] **DBX-AB1** (backlog) Bronze via SQL warehouse `INSERT` (databricks-sql-connector) instead of the Volume; measure the warehouse-quota impact
+<a id="dbx-ab2"></a>
+- [ ] **DBX-AB2** (backlog) Zerobus Ingest: check whether it is available and whether auth works on Free Edition (PAT / U2M rather than service principal); if it does, it replaces the shipper's upload step
+
 ## Backlog (DBX-B) — each has a plan in `CMP-dbx-fe/docs/backlog/`
 
 <a id="dbx-b1"></a>
@@ -71,7 +100,7 @@ Plan: [plan.md](plan.md) · index: [README.md](README.md) · implementation: `./
 - [ ] **DBX-B3** Iceberg (REST catalog) locally / UniForm in Databricks → [iceberg-uniform.md](../../../CMP-dbx-fe/docs/backlog/iceberg-uniform.md)
 
 <a id="dbx-b4"></a>
-- [ ] **DBX-B4** Fallback ingest via UC Volume + Auto Loader if Kafka egress is blocked → [volume-drop-ingest.md](../../../CMP-dbx-fe/docs/backlog/volume-drop-ingest.md)
+- [ ] **DBX-B4** Fallback ingest via UC Volume + Auto Loader if Kafka egress is blocked → [volume-drop-ingest.md](../../../CMP-dbx-fe/docs/backlog/volume-drop-ingest.md) — **promoted to [DBX-A01…A07](#dbx-a)**
 
 <a id="dbx-b5"></a>
 - [ ] **DBX-B5** Kafka provider choice (Confluent / Aiven / Redpanda Serverless / MSK / GCP / YC / MWS / Hetzner) → [kafka-provider-choice.md](../../../CMP-dbx-fe/docs/backlog/kafka-provider-choice.md)
