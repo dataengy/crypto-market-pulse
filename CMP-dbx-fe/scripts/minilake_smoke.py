@@ -28,7 +28,6 @@ def sql_literal(value) -> str:
 
 def main() -> int:
     from databricks.sdk import WorkspaceClient
-    from databricks.sdk.service.catalog import ColumnInfo, TableType
 
     cfg = get(load_config(ROOT), "minilake")
     if not cfg["host"].startswith(("http://127.0.0.1:", "http://localhost:")):
@@ -54,9 +53,7 @@ def main() -> int:
         return res.result.data_array if res.result else []
 
     execute(f"DROP TABLE IF EXISTS {fq('trades_bronze')}")
-    w.tables.create(name="trades_bronze", catalog_name=catalog, schema_name=schema,
-                    table_type=TableType.MANAGED, data_source_format="DELTA",
-                    columns=[ColumnInfo(name=n, type_text=t) for n, t in COLUMNS])
+    execute(f"CREATE TABLE {fq('trades_bronze')} ({', '.join(f'{n} {t}' for n, t in COLUMNS)})")
     rows = []
     for offset, line in enumerate(x for x in (ROOT / "tests/fixtures/trades.jsonl").read_text().splitlines() if x):
         e = json.loads(line)

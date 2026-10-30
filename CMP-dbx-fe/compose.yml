@@ -24,5 +24,5 @@ services:
     image: ghcr.io/dmux/minilake:1.8.0
     container_name: cmp-dbx-minilake
     ports:
-      - "127.0.0.1:8000:8000"     # NEVER bind 0.0.0.0: MiniLake has no authentication
+      - "127.0.0.1:18000:8000"     # NEVER bind 0.0.0.0: MiniLake has no authentication
     restart: "no"

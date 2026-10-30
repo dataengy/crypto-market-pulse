@@ -18,7 +18,7 @@ The same code runs on both sides: `cmp.bronze.parse_trades`, `cmp.kafka.*` and t
 | Group | Tasks | Status |
 |---|---|---|
 | Local core, models, build, Spark+Delta | [DBX-L01](tasks.md#dbx-l01)–[DBX-L04](tasks.md#dbx-l04) | done: 14 tests green |
-| Local Kafka E2E, MiniLake | [DBX-L05](tasks.md#dbx-l05)–[DBX-L06](tasks.md#dbx-l06) | code written; blocked on the local Docker daemon (HTTP 500) |
+| Local Kafka E2E, MiniLake | [DBX-L05](tasks.md#dbx-l05)–[DBX-L06](tasks.md#dbx-l06) | done: Redpanda E2E exact + restart + replay dedup; MiniLake silver/dedup PASS, 1m/latest = DuckDB dialect gaps |
 | Cloud gate: Kafka egress from Free Edition | [DBX-C01](tasks.md#dbx-c01)–[DBX-C02](tasks.md#dbx-c02) | not started: needs Databricks CLI + login + Kafka account |
 | Cloud deploy, run, verify | [DBX-C03](tasks.md#dbx-c03)–[DBX-C05](tasks.md#dbx-c05) | not started |
 | Backlog | [DBX-B1](tasks.md#dbx-b1)–[DBX-B7](tasks.md#dbx-b7) | parked |

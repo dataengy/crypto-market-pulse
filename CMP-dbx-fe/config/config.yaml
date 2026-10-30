@@ -41,7 +41,7 @@ dashboard:
   symbol: BTCUSDT
 
 minilake:                       # dmux/minilake emulator, localhost only, no auth
-  host: "http://127.0.0.1:8000"
+  host: "http://127.0.0.1:18000"
   token: local-dev
   catalog: cmp_local
   schema: crypto_pulse

@@ -25,13 +25,13 @@ Plan: [plan.md](plan.md) · index: [README.md](README.md) · implementation: `./
   - plan: [plan.md › Step 4](plan.md#steps)
 
 <a id="dbx-l05"></a>
-- [ ] **DBX-L05** Local Kafka E2E: `just up && just it`
+- [x] **DBX-L05** Local Kafka E2E: `just up && just it`
   - depends: DBX-L04 and a working Docker daemon (Docker Desktop returned HTTP 500 on 2026-10-30; Colima profile is stopped)
   - acceptance: fixture → Redpanda → `local_spark.run` (availableNow) is exact; a restart doesn't re-read; producer replay is deduped
   - plan: [plan.md › Steps 3–4](plan.md#steps)
 
 <a id="dbx-l06"></a>
-- [ ] **DBX-L06** MiniLake smoke: `just minilake-smoke`
+- [x] **DBX-L06** MiniLake smoke: `just minilake-smoke`
   - depends: DBX-L05 (same compose)
   - acceptance: SDK creates the catalog/schema/table, fixture INSERT works, silver/dedup run (dedup = 7); DuckDB dialect gaps (expected for `TIMESTAMP_MILLIS`, `named_struct`) are listed in the README instead of forking the SQL
   - plan: [plan.md › Step 5](plan.md#steps)

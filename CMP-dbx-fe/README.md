@@ -26,7 +26,7 @@ Config: `config/config.yaml` holds tracked, non-secret settings. `config/.env.co
 
 ## Local loop (dev and debug only)
 ```bash
-just up                         # Redpanda :19092 + MiniLake :8000, localhost only; reuse existing ones first
+just up                         # Redpanda :19092 + MiniLake :18000, localhost only; reuse existing ones first
 just produce fixture            # 8 fixture trades (1 duplicate) → market.trades.v1
 just produce bybit --max-trades 200
 just spark                      # drain the topic → Delta → print trades_1m / trades_latest
@@ -61,7 +61,8 @@ Done and tested:
 - unit tests
 - build sync
 - Spark + Delta models on the fixture: exact bar, malformed row dropped, replay deduped
+- local Kafka E2E (`just it`): fixture → Redpanda → Spark exact, restart doesn't re-read, producer replay deduped
+- MiniLake smoke: SDK UC objects + statements, silver/dedup PASS; `trades_1m`/`trades_latest` hit DuckDB gaps (`TIMESTAMP_MILLIS`, `named_struct`)
 
 Written, not run:
-- local Kafka E2E and MiniLake smoke (the local Docker daemon was failing)
 - everything in the cloud: bundle, probe, pipeline, dashboard JSON (needs a workspace login and a Kafka account)
