@@ -31,7 +31,7 @@ def load_config(root: Path = ROOT) -> dict[str, Any]:
     import yaml
     data = yaml.safe_load((root / CONFIG).read_text(encoding="utf-8"))
     if not isinstance(data, dict):
-        raise ValueError(f"{CONFIG} must be a mapping")
+        raise TypeError(f"{CONFIG} must be a mapping")
     return data
 
 

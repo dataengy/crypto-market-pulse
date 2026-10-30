@@ -61,8 +61,8 @@ def main() -> int:
         rows.append("(" + ", ".join(sql_literal(v) for v in values) + ", CURRENT_TIMESTAMP)")
     execute(f"INSERT INTO {fq('trades_bronze')} VALUES " + ", ".join(rows))
 
-    steps = [("trades_silver", f"SELECT * FROM ({model_sql('10_silver', fq('trades_bronze'))}) AS s "
-                               f"WHERE {valid_trade_predicate()}"),
+    steps = [("trades_silver", (f"SELECT * FROM ({model_sql('10_silver', fq('trades_bronze'))}) AS s "
+                                f"WHERE {valid_trade_predicate()}")),
              ("trades_dedup", model_sql("20_dedup", fq("trades_silver"))),
              ("trades_1m", model_sql("30_1m", fq("trades_dedup"))),
              ("trades_latest", model_sql("40_latest", fq("trades_dedup")))]
@@ -71,7 +71,7 @@ def main() -> int:
         try:
             execute(f"CREATE OR REPLACE VIEW {fq(name)} AS {sql}")
             print(f"PASS {name}: {execute(f'SELECT COUNT(*) FROM {fq(name)}')}")
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - any engine error on a portable model is a reported dialect gap
             gaps.append(name)
             print(f"DIALECT GAP {name}: {str(exc)[:300]}")
     dedup = execute(f"SELECT COUNT(*) FROM {fq('trades_dedup')}") if "trades_dedup" not in gaps else None

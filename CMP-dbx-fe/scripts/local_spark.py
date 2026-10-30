@@ -40,8 +40,8 @@ def table(lake: Path, name: str) -> str:
 def build_models(spark, lake: Path) -> None:
     t = lambda name: table(lake, name)
     steps = [
-        ("trades_silver", f"SELECT * FROM ({model_sql('10_silver', t('trades_bronze'))}) AS s "
-                          f"WHERE {valid_trade_predicate()}"),
+        ("trades_silver", (f"SELECT * FROM ({model_sql('10_silver', t('trades_bronze'))}) AS s "
+                           f"WHERE {valid_trade_predicate()}")),
         ("trades_dedup", model_sql("20_dedup", t("trades_silver"))),
         ("trades_1m", model_sql("30_1m", t("trades_dedup"))),
         ("trades_latest", model_sql("40_latest", t("trades_dedup"))),

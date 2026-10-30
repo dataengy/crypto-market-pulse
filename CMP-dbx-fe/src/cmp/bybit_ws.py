@@ -49,7 +49,7 @@ def stream_trades(ws: dict[str, Any], publisher: Any, *, max_trades: int | None)
                         LOGGER.warning("Quarantined malformed websocket trade: %s", exc)
         except KeyboardInterrupt:
             break
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - reconnect on any transport error
             LOGGER.warning("WebSocket disconnected: %s; retry in %ss", type(exc).__name__, backoff)
             time.sleep(backoff)
             backoff = min(backoff * 2, ws["backoff_max_s"])

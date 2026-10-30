@@ -62,7 +62,7 @@ def main() -> None:
             count = stream_trades(get(cfg, "bybit"), publisher, max_trades=args.max_trades)
     finally:
         publisher.close()
-    logging.info("published %s trades (profile=%s, sink=%s)", count, profile, args.sink)
+    logging.getLogger(__name__).info("published %s trades (profile=%s, sink=%s)", count, profile, args.sink)
 
 
 if __name__ == "__main__":

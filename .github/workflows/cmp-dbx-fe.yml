@@ -47,6 +47,7 @@ jobs:
           path: ~/.ivy2.5.2
           key: ivy-${{ runner.os }}-${{ hashFiles('CMP-dbx-fe/uv.lock') }}
       - run: uv sync --locked
+      - run: uv run ruff check .
       - name: build-sync + unit tests
         run: just verify
       - name: Spark + Delta models on the fixture
